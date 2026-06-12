@@ -9,6 +9,8 @@ import { FormModal } from '../../components/ui/FormModal'
 import { today } from '../../utils/dates'
 import { money } from '../../utils/money'
 import type {
+  AccountDirection,
+  AccountEntryType,
   Customer,
   CustomerAccountEntry,
   CustomerBalance,
@@ -23,6 +25,19 @@ type Party = Customer | Supplier
 type Entry = CustomerAccountEntry | SupplierAccountEntry
 type Balance = CustomerBalance | SupplierBalance
 
+type AccountForm = {
+  party_id: string
+  amount: string
+  currency: string
+  entry_date: string
+  entry_type: AccountEntryType
+  direction: AccountDirection
+  description: string
+  transaction_id: string
+}
+
+const manualEntryTypes = ['opening_balance', 'manual_debt', 'manual_credit', 'adjustment']
+
 const labels = {
   customer: {
     title: 'حسابات العملاء',
@@ -36,7 +51,19 @@ const labels = {
     partyKey: 'customer_id',
     nameKey: 'customer_name',
     linkBase: '/customer-accounts',
-    paymentButton: 'إضافة دفعة عميل',
+    entryButton: 'إضافة قيد حساب عميل',
+    directionHelp: {
+      debit: 'مدين: يزيد المبلغ المستحق على العميل',
+      credit: 'دائن: يقلل المبلغ المستحق على العميل',
+    },
+    entryTypes: [
+      ['transaction_charge', 'قيد معاملة'],
+      ['payment', 'دفعة'],
+      ['opening_balance', 'رصيد افتتاحي'],
+      ['manual_debt', 'دين يدوي'],
+      ['manual_credit', 'دائن يدوي / إيصال سالب'],
+      ['adjustment', 'تسوية'],
+    ],
   },
   supplier: {
     title: 'حسابات الموردين',
@@ -50,26 +77,58 @@ const labels = {
     partyKey: 'supplier_id',
     nameKey: 'supplier_name',
     linkBase: '/supplier-accounts',
-    paymentButton: 'إضافة دفعة مورد',
+    entryButton: 'إضافة قيد حساب مورد',
+    directionHelp: {
+      debit: 'مدين: يزيد المبلغ المستحق للمورد',
+      credit: 'دائن: يقلل المبلغ المستحق للمورد',
+    },
+    entryTypes: [
+      ['transaction_cost', 'تكلفة معاملة'],
+      ['payment', 'دفعة'],
+      ['opening_balance', 'رصيد افتتاحي'],
+      ['manual_debt', 'دين يدوي'],
+      ['manual_credit', 'دائن يدوي / إيصال سالب'],
+      ['adjustment', 'تسوية'],
+    ],
   },
 } as const
 
+function emptyForm(selectedId?: string): AccountForm {
+  return {
+    party_id: selectedId ?? '',
+    amount: '',
+    currency: 'LYD',
+    entry_date: today(),
+    entry_type: 'opening_balance',
+    direction: 'debit',
+    description: '',
+    transaction_id: '',
+  }
+}
+
+function isManualEntryType(entryType: string) {
+  return manualEntryTypes.includes(entryType)
+}
+
 function entrySign(entry: Entry) {
-  return entry.entry_type === 'payment' ? -Number(entry.amount) : Number(entry.amount)
+  return entry.direction === 'credit' ? -Number(entry.amount) : Number(entry.amount)
 }
 
 function entryDebit(entry: Entry) {
-  return entry.entry_type === 'payment' ? 0 : Number(entry.amount)
+  return entry.direction === 'debit' ? Number(entry.amount) : 0
 }
 
 function entryCredit(entry: Entry) {
-  return entry.entry_type === 'payment' ? Number(entry.amount) : 0
+  return entry.direction === 'credit' ? Number(entry.amount) : 0
 }
 
 function typeLabel(type: string) {
   if (type === 'transaction_charge') return 'قيد معاملة'
   if (type === 'transaction_cost') return 'تكلفة معاملة'
   if (type === 'payment') return 'دفعة'
+  if (type === 'opening_balance') return 'رصيد افتتاحي'
+  if (type === 'manual_debt') return 'دين يدوي'
+  if (type === 'manual_credit') return 'دائن يدوي / إيصال سالب'
   return 'تسوية'
 }
 
@@ -83,14 +142,7 @@ export function AccountPage({ type }: { type: AccountKind }) {
   const [balances, setBalances] = useState<Balance[]>([])
   const [entries, setEntries] = useState<Entry[]>([])
   const [transactions, setTransactions] = useState<TransactionSummary[]>([])
-  const [form, setForm] = useState({
-    party_id: selectedId ?? '',
-    amount: '',
-    currency: 'LYD',
-    entry_date: today(),
-    description: '',
-    transaction_id: '',
-  })
+  const [form, setForm] = useState<AccountForm>(() => emptyForm(selectedId))
   const [filters, setFilters] = useState({ dateFrom: '', dateTo: '', currency: '' })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -146,15 +198,20 @@ export function AccountPage({ type }: { type: AccountKind }) {
       setError(`${config.party} والمبلغ مطلوبان.`)
       return
     }
+    if (Number(form.amount) <= 0) {
+      setError('المبلغ يجب أن يكون أكبر من صفر.')
+      return
+    }
 
     const payload = {
       [config.partyKey]: form.party_id,
       entry_date: form.entry_date,
-      entry_type: 'payment',
+      entry_type: form.entry_type,
+      direction: form.direction,
       amount: Number(form.amount),
       currency: form.currency,
       description: form.description || null,
-      transaction_id: form.transaction_id || null,
+      transaction_id: isManualEntryType(form.entry_type) ? null : form.transaction_id || null,
       created_by: profile?.id,
     }
 
@@ -164,8 +221,8 @@ export function AccountPage({ type }: { type: AccountKind }) {
     const { error } = result
     if (error) setError(error.message)
     else {
-      setSuccess(editing ? 'تم حفظ التعديل.' : 'تمت إضافة الدفعة.')
-      setForm({ party_id: selectedId ?? '', amount: '', currency: 'LYD', entry_date: today(), description: '', transaction_id: '' })
+      setSuccess(editing ? 'تم حفظ التعديل.' : 'تمت إضافة قيد الحساب.')
+      setForm(emptyForm(selectedId))
       setEditing(null)
       setModalOpen(false)
       await load()
@@ -191,9 +248,10 @@ export function AccountPage({ type }: { type: AccountKind }) {
   }, [balances, config.partyKey])
 
   const statement = useMemo(() => {
-    let running = 0
+    const runningByCurrency = new Map<string, number>()
     return entries.map((entry) => {
-      running += entrySign(entry)
+      const running = (runningByCurrency.get(entry.currency) ?? 0) + entrySign(entry)
+      runningByCurrency.set(entry.currency, running)
       return { ...entry, running_balance: running }
     })
   }, [entries])
@@ -213,21 +271,28 @@ export function AccountPage({ type }: { type: AccountKind }) {
 
       {canCreateOperationalRecords(profile) && (
         <div className="actions">
-          <button onClick={() => { setEditing(null); setForm({ party_id: selectedId ?? '', amount: '', currency: 'LYD', entry_date: today(), description: '', transaction_id: '' }); setModalOpen(true) }}>{config.paymentButton}</button>
+          <button onClick={() => { setEditing(null); setForm(emptyForm(selectedId)); setModalOpen(true) }}>{config.entryButton}</button>
         </div>
       )}
 
       {modalOpen && canCreateOperationalRecords(profile) && (
-        <FormModal title={editing ? 'تعديل قيد حساب' : config.paymentButton} onClose={() => { setModalOpen(false); setEditing(null) }}>
+        <FormModal title={editing ? 'تعديل قيد حساب' : config.entryButton} onClose={() => { setModalOpen(false); setEditing(null) }}>
         <form className="form-grid" onSubmit={submit}>
           <label>{config.party}<select value={form.party_id} onChange={(event) => setForm({ ...form, party_id: event.target.value, transaction_id: '' })}><option value="">اختر</option>{parties.map((party) => <option key={party.id} value={party.id}>{party.name}</option>)}</select></label>
+          <label>نوع القيد<select value={form.entry_type} onChange={(event) => {
+            const entry_type = event.target.value as AccountEntryType
+            const direction = entry_type === 'payment' || entry_type === 'manual_credit' ? 'credit' : form.direction
+            setForm({ ...form, entry_type, direction, transaction_id: isManualEntryType(entry_type) ? '' : form.transaction_id })
+          }}>{config.entryTypes.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+          <label>الاتجاه<select value={form.direction} onChange={(event) => setForm({ ...form, direction: event.target.value as AccountDirection })}><option value="debit">مدين</option><option value="credit">دائن</option></select></label>
+          <div className="status">{form.direction === 'debit' ? config.directionHelp.debit : config.directionHelp.credit}</div>
           <label>المبلغ<input type="number" min="0.01" step="0.01" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} /></label>
           <label>العملة<select value={form.currency} onChange={(event) => setForm({ ...form, currency: event.target.value })}><option>LYD</option><option>USD</option><option>EUR</option></select></label>
           <label>التاريخ<input type="date" value={form.entry_date} onChange={(event) => setForm({ ...form, entry_date: event.target.value })} /></label>
-          <label>معاملة مرتبطة اختياريًا<select value={form.transaction_id} onChange={(event) => setForm({ ...form, transaction_id: event.target.value })}><option value="">بدون ربط</option>{visibleTransactions.map((row) => <option key={row.transaction_id} value={row.transaction_id}>{row.transaction_date} / {row.service_name} / {row.currency}</option>)}</select></label>
+          <label>معاملة مرتبطة اختياريا<select value={form.transaction_id} onChange={(event) => setForm({ ...form, transaction_id: event.target.value })} disabled={isManualEntryType(form.entry_type)}><option value="">بدون ربط</option>{visibleTransactions.map((row) => <option key={row.transaction_id} value={row.transaction_id}>{row.transaction_date} / {row.service_name} / {row.currency}</option>)}</select></label>
           <label>الوصف<textarea value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} /></label>
           <div className="actions">
-            <button>{editing ? 'حفظ التعديل' : config.paymentButton}</button>
+            <button>{editing ? 'حفظ التعديل' : config.entryButton}</button>
             <button type="button" className="secondary" onClick={() => { setModalOpen(false); setEditing(null) }}>إلغاء</button>
           </div>
         </form>
@@ -256,7 +321,7 @@ export function AccountPage({ type }: { type: AccountKind }) {
             { key: 'currency', header: 'العملة', render: (row) => row.currency },
             { key: 'created_by', header: 'أنشئ بواسطة', render: (row) => row.profiles?.full_name ?? '' },
             { key: 'transaction', header: 'المعاملة', render: (row) => row.transaction_id ? row.transaction_id.slice(0, 8) : '-' },
-            { key: 'actions', header: 'الإجراءات', render: (row) => admin ? <div className="actions"><button className="secondary" onClick={() => { setEditing(row); setForm({ party_id: String(row[config.partyKey as keyof Entry] ?? ''), amount: String(row.amount), currency: row.currency, entry_date: row.entry_date, description: row.description ?? '', transaction_id: row.transaction_id ?? '' }); setModalOpen(true) }}>تعديل</button><button className="danger" onClick={() => setDeleting(row)}>حذف</button></div> : 'عرض فقط' },
+            { key: 'actions', header: 'الإجراءات', render: (row) => admin ? <div className="actions"><button className="secondary" onClick={() => { setEditing(row); setForm({ party_id: String(row[config.partyKey as keyof Entry] ?? ''), amount: String(row.amount), currency: row.currency, entry_date: row.entry_date, entry_type: row.entry_type, direction: row.direction, description: row.description ?? '', transaction_id: row.transaction_id ?? '' }); setModalOpen(true) }}>تعديل</button><button className="danger" onClick={() => setDeleting(row)}>حذف</button></div> : 'عرض فقط' },
           ]}
         />
       ) : (

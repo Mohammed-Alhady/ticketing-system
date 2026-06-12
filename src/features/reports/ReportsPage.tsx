@@ -19,6 +19,9 @@ const emptyTransactionFilters = {
 }
 
 function entryLabel(type: string) {
+  if (type === 'opening_balance') return 'رصيد افتتاحي'
+  if (type === 'manual_debt') return 'دين يدوي'
+  if (type === 'manual_credit') return 'دائن يدوي / إيصال سالب'
   if (type === 'transaction_charge') return 'قيد معاملة'
   if (type === 'transaction_cost') return 'تكلفة معاملة'
   if (type === 'payment') return 'دفعة'
@@ -26,17 +29,18 @@ function entryLabel(type: string) {
 }
 
 function debit(entry: CustomerAccountEntry | SupplierAccountEntry) {
-  return entry.entry_type === 'payment' ? 0 : Number(entry.amount)
+  return entry.direction === 'debit' ? Number(entry.amount) : 0
 }
 
 function credit(entry: CustomerAccountEntry | SupplierAccountEntry) {
-  return entry.entry_type === 'payment' ? Number(entry.amount) : 0
+  return entry.direction === 'credit' ? Number(entry.amount) : 0
 }
 
 function withRunning(entries: (CustomerAccountEntry | SupplierAccountEntry)[]) {
-  let running = 0
+  const runningByCurrency = new Map<string, number>()
   return entries.map((entry) => {
-    running += debit(entry) - credit(entry)
+    const running = (runningByCurrency.get(entry.currency) ?? 0) + debit(entry) - credit(entry)
+    runningByCurrency.set(entry.currency, running)
     return { ...entry, running_balance: running }
   })
 }

@@ -56,36 +56,102 @@ Required tables:
 
 Legacy tables `customer_payments` and `supplier_payments` may still exist for backward compatibility, but the UI now uses account entries instead of transaction-based payments.
 
-## Account-Based Payments
+## Manual Account Entries and Account-Based Payments
 
-Payments are recorded on the customer or supplier account, not directly on a transaction.
+Payments and manual balances are recorded on the customer or supplier account ledger. An account entry may be linked to a transaction, or it may be a standalone manual entry with `transaction_id = null`.
 
 `customer_account_entries` stores:
 
 - Customer transaction charges.
 - Customer payments.
+- Customer opening balances.
+- Customer manual debts.
+- Customer manual credits and negative receipts.
 - Customer balance adjustments.
 - Optional `transaction_id` when an entry is linked to a transaction.
+- `direction`, which controls the accounting effect.
 - `created_by` profile for audit/reporting.
 
 `supplier_account_entries` stores:
 
 - Supplier transaction costs.
 - Supplier payments.
+- Supplier opening balances.
+- Supplier manual debts.
+- Supplier manual credits and negative receipts.
 - Supplier balance adjustments.
 - Optional `transaction_id` when an entry is linked to a transaction.
+- `direction`, which controls the accounting effect.
 - `created_by` profile for audit/reporting.
 
 When a transaction is created, the database trigger creates:
 
-- A `customer_account_entries` row with `entry_type = transaction_charge`.
-- A `supplier_account_entries` row with `entry_type = transaction_cost`.
+- A `customer_account_entries` row with `entry_type = transaction_charge` and `direction = debit`.
+- A `supplier_account_entries` row with `entry_type = transaction_cost` and `direction = debit`.
+
+When a payment is added:
+
+- Customer payment: `entry_type = payment`, `direction = credit`.
+- Supplier payment: `entry_type = payment`, `direction = credit`.
+
+Supported customer entry types:
+
+- `transaction_charge`
+- `payment`
+- `opening_balance`
+- `manual_debt`
+- `manual_credit`
+- `adjustment`
+
+Supported supplier entry types:
+
+- `transaction_cost`
+- `payment`
+- `opening_balance`
+- `manual_debt`
+- `manual_credit`
+- `adjustment`
+
+Direction rules:
+
+- `debit` increases the account balance.
+- `credit` decreases the account balance.
+- For customers, debit increases what the customer owes us and credit decreases what the customer owes us.
+- For suppliers, debit increases what we owe the supplier and credit decreases what we owe the supplier.
 
 Balances:
 
-- Customer balance = charges and positive adjustments minus payments.
-- Supplier balance = costs and positive adjustments minus payments.
+- Customer balance = total debit - total credit.
+- Supplier balance = total debit - total credit.
 - Balances are grouped by currency in `customer_balances_by_currency` and `supplier_balances_by_currency`.
+
+Examples:
+
+```sql
+-- Customer opening balance owed by the customer
+insert into customer_account_entries
+  (customer_id, entry_type, direction, amount, currency, transaction_id, description)
+values
+  ('CUSTOMER_ID', 'opening_balance', 'debit', 1000, 'LYD', null, 'رصيد افتتاحي مستحق على العميل');
+
+-- Customer manual credit / negative receipt
+insert into customer_account_entries
+  (customer_id, entry_type, direction, amount, currency, transaction_id, description)
+values
+  ('CUSTOMER_ID', 'manual_credit', 'credit', 200, 'LYD', null, 'خصم أو تسوية لصالح العميل');
+
+-- Supplier opening balance owed to the supplier
+insert into supplier_account_entries
+  (supplier_id, entry_type, direction, amount, currency, transaction_id, description)
+values
+  ('SUPPLIER_ID', 'opening_balance', 'debit', 1500, 'LYD', null, 'رصيد افتتاحي مستحق للمورد');
+
+-- Supplier manual debt without a transaction
+insert into supplier_account_entries
+  (supplier_id, entry_type, direction, amount, currency, transaction_id, description)
+values
+  ('SUPPLIER_ID', 'manual_debt', 'debit', 400, 'LYD', null, 'مبلغ مستحق للمورد بدون معاملة');
+```
 
 The migration also creates:
 
@@ -169,8 +235,8 @@ The transactions report does not load unfiltered data. Select at least one filte
 
 Calculations:
 
-- `customer_balance = sum(transaction_charge + adjustments) - sum(payments)`
-- `supplier_balance = sum(transaction_cost + adjustments) - sum(payments)`
+- `customer_balance = sum(case when direction = 'debit' then amount else 0 end) - sum(case when direction = 'credit' then amount else 0 end)`
+- `supplier_balance = sum(case when direction = 'debit' then amount else 0 end) - sum(case when direction = 'credit' then amount else 0 end)`
 - `expected_profit = customer_price - supplier_cost`
 - `actual_profit = total customer payments - total supplier payments`
 
@@ -199,6 +265,16 @@ For an existing database, run `20260612214500_account_ledgers_and_employee_trans
 - `suppliers`
 
 Run this cleanup migration only when you want to empty operational data while keeping user accounts.
+
+`20260613010000_manual_account_entry_directions.sql` adds manual-account-entry support. It:
+
+- Adds `direction` to customer and supplier account entries.
+- Backfills existing directions from existing entry types.
+- Allows opening balances, manual debts, manual credits, and adjustments.
+- Keeps `transaction_id` nullable for standalone entries.
+- Updates balance and transaction summary views to use debit minus credit.
+- Updates transaction ledger triggers to create debit entries.
+- Enforces positive amounts, allowed entry types, allowed directions, and current-user `created_by` handling.
 
 To push new migrations from this project:
 

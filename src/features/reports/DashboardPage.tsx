@@ -30,8 +30,8 @@ export function DashboardPage() {
   const [customerBalances, setCustomerBalances] = useState<CustomerBalance[]>([])
   const [supplierBalances, setSupplierBalances] = useState<SupplierBalance[]>([])
   const [monthTransactions, setMonthTransactions] = useState<TransactionReportRow[]>([])
-  const [customerPayments, setCustomerPayments] = useState<{ currency: string; amount: number }[]>([])
-  const [supplierPayments, setSupplierPayments] = useState<{ currency: string; amount: number }[]>([])
+  const [customerPayments, setCustomerPayments] = useState<{ currency: string; amount: number; direction: string }[]>([])
+  const [supplierPayments, setSupplierPayments] = useState<{ currency: string; amount: number; direction: string }[]>([])
   const [latest, setLatest] = useState<TransactionReportRow[]>([])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
@@ -62,8 +62,8 @@ export function DashboardPage() {
         supabase.from('supplier_balances_by_currency').select('*'),
         supabase.from('transaction_report_view').select('*').gte('transaction_date', start).lte('transaction_date', end),
         supabase.from('transaction_report_view').select('*').order('transaction_date', { ascending: false }).limit(5),
-        supabase.from('customer_account_entries').select('currency, amount').eq('entry_type', 'payment').gte('entry_date', start).lte('entry_date', end),
-        supabase.from('supplier_account_entries').select('currency, amount').eq('entry_type', 'payment').gte('entry_date', start).lte('entry_date', end),
+        supabase.from('customer_account_entries').select('currency, amount, direction').eq('entry_type', 'payment').gte('entry_date', start).lte('entry_date', end),
+        supabase.from('supplier_account_entries').select('currency, amount, direction').eq('entry_type', 'payment').gte('entry_date', start).lte('entry_date', end),
       ])
 
       const firstError = transactionsCount.error ?? customersCount.error ?? suppliersCount.error ?? servicesCount.error ?? monthTransactionsCount.error ?? customerBalanceRows.error ?? supplierBalanceRows.error ?? monthTransactionRows.error ?? latestRows.error ?? customerPaymentRows.error ?? supplierPaymentRows.error
@@ -80,8 +80,8 @@ export function DashboardPage() {
       setSupplierBalances((supplierBalanceRows.data ?? []) as SupplierBalance[])
       setMonthTransactions((monthTransactionRows.data ?? []) as TransactionReportRow[])
       setLatest((latestRows.data ?? []) as TransactionReportRow[])
-      setCustomerPayments((customerPaymentRows.data ?? []).map((row) => ({ currency: String(row.currency), amount: Number(row.amount) })))
-      setSupplierPayments((supplierPaymentRows.data ?? []).map((row) => ({ currency: String(row.currency), amount: Number(row.amount) })))
+      setCustomerPayments((customerPaymentRows.data ?? []).map((row) => ({ currency: String(row.currency), amount: Number(row.amount), direction: String(row.direction) })))
+      setSupplierPayments((supplierPaymentRows.data ?? []).map((row) => ({ currency: String(row.currency), amount: Number(row.amount), direction: String(row.direction) })))
       setLoading(false)
     }
     load()
@@ -96,8 +96,8 @@ export function DashboardPage() {
     for (const row of customerBalances) customerDebt.set(row.currency, (customerDebt.get(row.currency) ?? 0) + Number(row.balance))
     for (const row of supplierBalances) supplierDebt.set(row.currency, (supplierDebt.get(row.currency) ?? 0) + Number(row.balance))
     for (const row of monthTransactions) expectedProfit.set(row.currency, (expectedProfit.get(row.currency) ?? 0) + Number(row.expected_profit))
-    for (const row of customerPayments) actualProfit.set(row.currency, (actualProfit.get(row.currency) ?? 0) + row.amount)
-    for (const row of supplierPayments) actualProfit.set(row.currency, (actualProfit.get(row.currency) ?? 0) - row.amount)
+    for (const row of customerPayments) actualProfit.set(row.currency, (actualProfit.get(row.currency) ?? 0) + (row.direction === 'credit' ? row.amount : -row.amount))
+    for (const row of supplierPayments) actualProfit.set(row.currency, (actualProfit.get(row.currency) ?? 0) - (row.direction === 'credit' ? row.amount : -row.amount))
 
     const toRows = (map: Map<string, number>) => [...map.entries()].map(([currency, amount]) => ({ currency, amount }))
 

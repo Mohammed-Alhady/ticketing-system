@@ -85,13 +85,22 @@ export type TransactionSummary = {
   created_at?: string
 }
 
-export type AccountEntryType = 'transaction_charge' | 'transaction_cost' | 'payment' | 'adjustment'
+export type AccountEntryType =
+  | 'transaction_charge'
+  | 'transaction_cost'
+  | 'payment'
+  | 'opening_balance'
+  | 'manual_debt'
+  | 'manual_credit'
+  | 'adjustment'
+export type AccountDirection = 'debit' | 'credit'
 
 export type CustomerAccountEntry = {
   id: string
   customer_id: string
   entry_date: string
   entry_type: AccountEntryType
+  direction: AccountDirection
   amount: number
   currency: Currency
   description?: string | null
@@ -108,6 +117,7 @@ export type SupplierAccountEntry = {
   supplier_id: string
   entry_date: string
   entry_type: AccountEntryType
+  direction: AccountDirection
   amount: number
   currency: Currency
   description?: string | null

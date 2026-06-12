@@ -14,7 +14,7 @@ export function PaymentsPage({ type }: { type: 'customer' | 'supplier' }) {
   const [form, setForm] = useState({ transaction_id: '', amount: '', currency: 'LYD', payment_date: today(), payment_method: 'cash', notes: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
-  const table = type === 'customer' ? 'customer_payments' : 'supplier_payments'
+  const table = type === 'customer' ? 'customer_account_entries' : 'supplier_account_entries'
   const personKey = type === 'customer' ? 'customer_id' : 'supplier_id'
   const title = type === 'customer' ? 'دفعات العملاء' : 'دفعات الموردين'
 
@@ -22,7 +22,7 @@ export function PaymentsPage({ type }: { type: 'customer' | 'supplier' }) {
     setLoading(true)
     const [summary, paymentRows] = await Promise.all([
       supabase.from('transaction_summary').select('*').order('transaction_date', { ascending: false }),
-      supabase.from(table).select('*').order('payment_date', { ascending: false }),
+      supabase.from(table).select('*').eq('entry_type', 'payment').order('entry_date', { ascending: false }),
     ])
     const firstError = summary.error ?? paymentRows.error
     if (firstError) setError(firstError.message)
@@ -48,9 +48,10 @@ export function PaymentsPage({ type }: { type: 'customer' | 'supplier' }) {
       [personKey]: type === 'customer' ? selected.customer_id : selected.supplier_id,
       amount: Number(form.amount),
       currency: form.currency,
-      payment_date: form.payment_date,
-      payment_method: form.payment_method,
-      notes: form.notes,
+      entry_date: form.payment_date,
+      entry_type: 'payment',
+      direction: 'credit',
+      description: form.notes,
       created_by: profile?.id,
     }
     const { error } = await supabase.from(table).insert(payload)
@@ -80,10 +81,10 @@ export function PaymentsPage({ type }: { type: 'customer' | 'supplier' }) {
         <DataTable
           rows={payments}
           columns={[
-            { key: 'date', header: 'التاريخ', render: (row) => String(row.payment_date ?? '') },
+            { key: 'date', header: 'التاريخ', render: (row) => String(row.entry_date ?? '') },
             { key: 'amount', header: 'المبلغ', render: (row) => money(Number(row.amount), String(row.currency)) },
-            { key: 'method', header: 'الطريقة', render: (row) => String(row.payment_method ?? '') },
-            { key: 'notes', header: 'ملاحظات', render: (row) => String(row.notes ?? '') },
+            { key: 'method', header: 'الطريقة', render: () => '-' },
+            { key: 'notes', header: 'ملاحظات', render: (row) => String(row.description ?? '') },
           ]}
         />
       )}
