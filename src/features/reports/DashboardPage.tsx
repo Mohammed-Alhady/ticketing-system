@@ -134,17 +134,17 @@ export function DashboardPage() {
       </div>
       {error && <div className="error">{error}</div>}
       <div className="grid">
-        <DashboardCard title="عدد المعاملات" value={counts.transactions} />
-        <DashboardCard title="عدد العملاء" value={counts.customers} />
-        <DashboardCard title="عدد الموردين" value={counts.suppliers} />
-        <DashboardCard title="عدد الخدمات" value={counts.services} />
-        <DashboardCard title="ديون العملاء حسب العملة" value={groupedMoney(totals.customerDebt)} />
-        <DashboardCard title="ديون الموردين حسب العملة" value={groupedMoney(totals.supplierDebt)} />
-        <DashboardCard title="ربح الشهر المتوقع" value={groupedMoney(totals.expectedProfit)} />
-        <DashboardCard title="ربح الشهر الفعلي" value={groupedMoney(totals.actualProfit)} />
-        <DashboardCard title="معاملات الشهر الحالي" value={counts.monthTransactions} />
-        <DashboardCard title="رحلات الذهاب القادمة" value={totals.upcomingDepartures} />
-        <DashboardCard title="رحلات العودة القادمة" value={totals.upcomingReturns} />
+        <DashboardCard title="عدد المعاملات" value={counts.transactions} variant="transactions" />
+        <DashboardCard title="عدد العملاء" value={counts.customers} variant="customers" />
+        <DashboardCard title="عدد الموردين" value={counts.suppliers} variant="suppliers" />
+        <DashboardCard title="عدد الخدمات" value={counts.services} variant="transactions" />
+        <DashboardCard title="ديون العملاء حسب العملة" value={groupedMoney(totals.customerDebt)} variant="debt" />
+        <DashboardCard title="ديون الموردين حسب العملة" value={groupedMoney(totals.supplierDebt)} variant="debt" />
+        <DashboardCard title="ربح الشهر المتوقع" value={groupedMoney(totals.expectedProfit)} variant="profit" />
+        <DashboardCard title="ربح الشهر الفعلي" value={groupedMoney(totals.actualProfit)} variant="profit" />
+        <DashboardCard title="معاملات الشهر الحالي" value={counts.monthTransactions} variant="transactions" />
+        <DashboardCard title="رحلات الذهاب القادمة" value={totals.upcomingDepartures} variant="flights" />
+        <DashboardCard title="رحلات العودة القادمة" value={totals.upcomingReturns} variant="flights" />
       </div>
       <section className="card">
         <h3>آخر 5 معاملات</h3>
