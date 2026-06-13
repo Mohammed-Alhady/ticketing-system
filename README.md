@@ -290,14 +290,22 @@ After saving, the modal closes and the list refreshes. Admin-only edit/delete ac
 
 The reports page includes:
 
-- Customer account statement with a required customer selection before loading the table.
-- Supplier account statement with a required supplier selection before loading the table.
-- Total customer debts grouped by customer and currency.
-- Total supplier debts grouped by supplier and currency.
-- Total profits grouped by currency with date, currency, and employee filters.
-- Transactions report by date, customer, supplier, service, currency, employee, and creator.
-- Transaction report filters for ticket number, PNR, departure date range, return date range, and saved/guest customer type.
-- Transaction report columns for ticket number, PNR, route summary, departure date, return date, guest customer name, and customer type.
+- Accordion report categories with one active report panel.
+- Report-specific filters and explicit `بحث` buttons.
+- Empty and loading states.
+- Total cards above result tables.
+- Separate currency totals; LYD, USD, and EUR are never mixed.
+
+Report categories:
+
+- `تقارير العملاء`: كشف حساب عميل، ديون العملاء، معاملات عميل.
+- `تقارير الموردين`: كشف حساب مورد، ديون الموردين، معاملات مورد.
+- `تقارير الإصدارات / المعاملات`: كشف المعاملات، إصدارات حسب الموظف، إصدارات حسب المورد، إصدارات حسب الخدمة.
+- `تقارير الرحلات`: الرحلات القادمة، رحلات العودة القادمة، تذاكر بدون موعد رحلة.
+- `تقارير الأرباح والمالية`: إجمالي الأرباح، ملخص مالي، الحركات المالية اليدوية.
+- `تقارير الموظفين`: أداء الموظفين، معاملات موظف.
+
+Filters vary by report and include date ranges, currency, customer, supplier, service, employee, creator, ticket number, PNR, saved/guest customer type, account entry type, and debit/credit direction.
 
 Customer and supplier statements show:
 

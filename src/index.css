@@ -247,6 +247,57 @@ th {
   white-space: pre-wrap;
 }
 
+.report-layout {
+  align-items: start;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(280px, 360px) 1fr;
+}
+
+.report-category {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.report-category-button,
+.report-item {
+  justify-content: space-between;
+  text-align: right;
+  width: 100%;
+}
+
+.report-category-button span,
+.report-item {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.report-category small,
+.report-item small,
+.report-panel p {
+  color: var(--muted);
+}
+
+.report-list {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.report-item.active {
+  outline: 2px solid var(--accent-2);
+}
+
+.report-panel {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (max-width: 1100px) {
+  .report-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
 .table-wrap {
   overflow-x: auto;
 }
