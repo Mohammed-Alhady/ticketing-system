@@ -56,6 +56,41 @@ Required tables:
 
 Legacy tables `customer_payments` and `supplier_payments` may still exist for backward compatibility, but the UI now uses account entries instead of transaction-based payments.
 
+## One-Time Customers
+
+Transactions can use either a saved customer or a one-time guest customer:
+
+- Saved customer: `transactions.customer_id` references `customers(id)`.
+- Guest customer: `guest_customer_name`, `guest_customer_phone`, and `guest_customer_notes` are stored directly on the transaction.
+- The database requires either `customer_id` or `guest_customer_name`.
+- Guest customers are not inserted into the `customers` table.
+- Guest customer transactions appear in transaction lists, reports, dashboard tables, and upcoming flights.
+- Guest customer transactions do not create `customer_account_entries`, so they do not appear in saved customer account statements.
+- Supplier ledger entries are still created normally.
+
+## Ticket Fields
+
+Ticket transactions can store extra ticket details:
+
+- `ticket_number`
+- `pnr`
+- `route_segments`
+- `departure_date`
+- `departure_time`
+- `return_date`
+- `return_time`
+
+`route_segments` is stored as a JSON array and can contain one or more route legs:
+
+```json
+[
+  { "from": "Tripoli", "to": "Istanbul" },
+  { "from": "Istanbul", "to": "Cairo" }
+]
+```
+
+The UI shows ticket fields only when the selected service type is `ticket`. Route summaries are displayed as `Tripoli → Istanbul → Cairo`.
+
 ## Manual Account Entries and Account-Based Payments
 
 Payments and manual balances are recorded on the customer or supplier account ledger. An account entry may be linked to a transaction, or it may be a standalone manual entry with `transaction_id = null`.
@@ -197,8 +232,46 @@ The dashboard reads live Supabase data and shows:
 - Actual profit for the current month grouped by currency.
 - Current-month transaction count.
 - Latest 5 transactions.
+- Upcoming departure count.
+- Upcoming return count.
+- Nearest 5 upcoming ticket flights.
 
 Money values are never mixed across currencies; LYD, USD, and EUR totals are displayed separately.
+
+Positive financial values are shown in green, negative values in red, and zero/default values in the normal text color. The app uses a shared `AmountText` component for this behavior.
+
+## Upcoming Flights
+
+The `/upcoming-flights` page lists ticket transactions with upcoming departure or return dates.
+
+Filters include:
+
+- Upcoming departures.
+- Upcoming returns.
+- Today.
+- Next 7 days.
+- Next 30 days.
+- Customer or guest customer name.
+- PNR.
+- Ticket number.
+
+The table shows customer name, phone, route summary, ticket number, PNR, departure and return timing, supplier, employee, and message actions.
+
+## Ticket Messages
+
+Ticket rows can generate an Arabic customer message from ticket data. The message preview includes available fields only:
+
+- Customer or guest customer name.
+- Route summary.
+- Ticket number.
+- PNR.
+- Departure date/time.
+- Return date/time.
+
+Actions:
+
+- `نسخ الرسالة` copies the message to the clipboard.
+- `فتح واتساب` appears when a saved or guest customer phone exists.
 
 ## UI Behavior
 
@@ -223,6 +296,8 @@ The reports page includes:
 - Total supplier debts grouped by supplier and currency.
 - Total profits grouped by currency with date, currency, and employee filters.
 - Transactions report by date, customer, supplier, service, currency, employee, and creator.
+- Transaction report filters for ticket number, PNR, departure date range, return date range, and saved/guest customer type.
+- Transaction report columns for ticket number, PNR, route summary, departure date, return date, guest customer name, and customer type.
 
 Customer and supplier statements show:
 
@@ -275,6 +350,16 @@ Run this cleanup migration only when you want to empty operational data while ke
 - Updates balance and transaction summary views to use debit minus credit.
 - Updates transaction ledger triggers to create debit entries.
 - Enforces positive amounts, allowed entry types, allowed directions, and current-user `created_by` handling.
+
+`20260613020000_guest_customers_and_ticket_fields.sql` adds guest customers and ticket metadata. It:
+
+- Makes `transactions.customer_id` nullable.
+- Adds guest customer fields.
+- Adds ticket number, PNR, route segments, departure, and return fields.
+- Enforces that each transaction has either a saved customer or a guest customer name.
+- Adds indexes for ticket number, PNR, departure date, return date, and guest customer name.
+- Updates transaction report and summary views for guest customers and ticket fields.
+- Updates the transaction ledger trigger so guest customer transactions do not create customer account entries.
 
 To push new migrations from this project:
 

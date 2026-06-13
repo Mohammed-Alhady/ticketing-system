@@ -41,7 +41,10 @@ export type Service = {
 
 export type Transaction = {
   id: string
-  customer_id: string
+  customer_id?: string | null
+  guest_customer_name?: string | null
+  guest_customer_phone?: string | null
+  guest_customer_notes?: string | null
   supplier_id: string
   service_id: string
   transaction_date: string
@@ -52,6 +55,13 @@ export type Transaction = {
   currency: Currency
   status: 'active' | 'cancelled' | 'completed'
   notes?: string | null
+  ticket_number?: string | null
+  pnr?: string | null
+  route_segments?: unknown
+  departure_date?: string | null
+  departure_time?: string | null
+  return_date?: string | null
+  return_time?: string | null
   employee_id?: string | null
   created_by?: string | null
   created_at?: string
@@ -61,8 +71,13 @@ export type TransactionSummary = {
   transaction_id: string
   transaction_date: string
   issue_date?: string | null
-  customer_id: string
+  customer_id?: string | null
   customer_name: string
+  customer_phone?: string | null
+  guest_customer_name?: string | null
+  guest_customer_phone?: string | null
+  guest_customer_notes?: string | null
+  customer_type?: 'saved' | 'guest'
   supplier_id: string
   supplier_name: string
   service_id: string
@@ -72,6 +87,13 @@ export type TransactionSummary = {
   customer_price: number
   expected_profit: number
   currency: Currency
+  ticket_number?: string | null
+  pnr?: string | null
+  route_segments?: unknown
+  departure_date?: string | null
+  departure_time?: string | null
+  return_date?: string | null
+  return_time?: string | null
   total_customer_paid: number
   customer_remaining: number
   total_supplier_paid: number
@@ -146,8 +168,13 @@ export type SupplierBalance = {
 export type TransactionReportRow = {
   transaction_id: string
   transaction_date: string
-  customer_id: string
+  customer_id?: string | null
   customer_name: string
+  customer_phone?: string | null
+  guest_customer_name?: string | null
+  guest_customer_phone?: string | null
+  guest_customer_notes?: string | null
+  customer_type?: 'saved' | 'guest'
   supplier_id: string
   supplier_name: string
   service_id: string
@@ -157,6 +184,13 @@ export type TransactionReportRow = {
   customer_price: number
   expected_profit: number
   currency: Currency
+  ticket_number?: string | null
+  pnr?: string | null
+  route_segments?: unknown
+  departure_date?: string | null
+  departure_time?: string | null
+  return_date?: string | null
+  return_time?: string | null
   employee_id?: string | null
   employee_name?: string | null
   created_by?: string | null

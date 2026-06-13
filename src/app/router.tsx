@@ -9,6 +9,7 @@ import { DashboardPage } from '../features/reports/DashboardPage'
 import { ReportsPage } from '../features/reports/ReportsPage'
 import { ServicesPage } from '../features/services/ServicesPage'
 import { SuppliersPage } from '../features/suppliers/SuppliersPage'
+import { UpcomingFlightsPage } from '../features/tickets/UpcomingFlightsPage'
 import { TransactionsPage } from '../features/transactions/TransactionsPage'
 import { UsersPage } from '../features/users/UsersPage'
 
@@ -26,6 +27,7 @@ export const router = createBrowserRouter([
           { path: '/suppliers', element: <SuppliersPage /> },
           { path: '/services', element: <ServicesPage /> },
           { path: '/transactions', element: <TransactionsPage /> },
+          { path: '/upcoming-flights', element: <UpcomingFlightsPage /> },
           { path: '/customer-accounts', element: <AccountPage type="customer" /> },
           { path: '/customer-accounts/:customerId', element: <AccountPage type="customer" /> },
           { path: '/supplier-accounts', element: <AccountPage type="supplier" /> },

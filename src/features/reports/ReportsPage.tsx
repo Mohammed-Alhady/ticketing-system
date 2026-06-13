@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { DataTable } from '../../components/ui/DataTable'
 import { supabase } from '../../lib/supabase'
-import { money } from '../../utils/money'
+import { AmountText } from '../../components/ui/AmountText'
+import { routeSummary } from '../../utils/tickets'
 import type { Customer, CustomerAccountEntry, Profile, Service, Supplier, SupplierAccountEntry, TransactionReportRow } from '../../types/models'
 
 type StatementRow = (CustomerAccountEntry | SupplierAccountEntry) & { running_balance: number }
@@ -16,6 +17,13 @@ const emptyTransactionFilters = {
   currency: '',
   employee: '',
   createdBy: '',
+  ticketNumber: '',
+  pnr: '',
+  departureFrom: '',
+  departureTo: '',
+  returnFrom: '',
+  returnTo: '',
+  customerType: '',
 }
 
 function entryLabel(type: string) {
@@ -102,7 +110,7 @@ export function ReportsPage() {
     setMessage('')
     setCustomerStatement([])
     if (!customerForm.customer) {
-      setError('اختر العميل أولاً.')
+      setError('اختر العميل أولا.')
       return
     }
     setReportLoading(true)
@@ -128,7 +136,7 @@ export function ReportsPage() {
     setMessage('')
     setSupplierStatement([])
     if (!supplierForm.supplier) {
-      setError('اختر المورد أولاً.')
+      setError('اختر المورد أولا.')
       return
     }
     setReportLoading(true)
@@ -156,7 +164,7 @@ export function ReportsPage() {
     setSearchedTransactions(true)
     const hasFilter = Object.values(transactionFilters).some(Boolean)
     if (!hasFilter) {
-      setMessage('اختر فلترًا واحدًا على الأقل أو نطاق تاريخ قبل البحث.')
+      setMessage('اختر فلتر واحد على الأقل أو نطاق تاريخ قبل البحث.')
       return
     }
     setReportLoading(true)
@@ -170,6 +178,13 @@ export function ReportsPage() {
     if (transactionFilters.currency) query = query.eq('currency', transactionFilters.currency)
     if (transactionFilters.employee) query = query.eq('employee_id', transactionFilters.employee)
     if (transactionFilters.createdBy) query = query.eq('created_by', transactionFilters.createdBy)
+    if (transactionFilters.ticketNumber) query = query.ilike('ticket_number', `%${transactionFilters.ticketNumber}%`)
+    if (transactionFilters.pnr) query = query.ilike('pnr', `%${transactionFilters.pnr}%`)
+    if (transactionFilters.departureFrom) query = query.gte('departure_date', transactionFilters.departureFrom)
+    if (transactionFilters.departureTo) query = query.lte('departure_date', transactionFilters.departureTo)
+    if (transactionFilters.returnFrom) query = query.gte('return_date', transactionFilters.returnFrom)
+    if (transactionFilters.returnTo) query = query.lte('return_date', transactionFilters.returnTo)
+    if (transactionFilters.customerType) query = query.eq('customer_type', transactionFilters.customerType)
     const { data, error } = await query.limit(500)
     if (error) setError(error.message)
     setTransactions((data ?? []) as TransactionReportRow[])
@@ -212,9 +227,9 @@ export function ReportsPage() {
         {customerStatement.length > 0 && (
           <>
             <div className="grid">
-              <div className="status">إجمالي المدين: {money(customerTotals.debit, customerTotals.currency)}</div>
-              <div className="status">إجمالي الدائن: {money(customerTotals.credit, customerTotals.currency)}</div>
-              <div className="status">الرصيد النهائي: {money(customerTotals.balance, customerTotals.currency)}</div>
+              <div className="status">إجمالي المدين: <AmountText value={customerTotals.debit} currency={customerTotals.currency} /></div>
+              <div className="status">إجمالي الدائن: <AmountText value={customerTotals.credit} currency={customerTotals.currency} /></div>
+              <div className="status">الرصيد النهائي: <AmountText value={customerTotals.balance} currency={customerTotals.currency} /></div>
             </div>
             <StatementTable rows={customerStatement} />
           </>
@@ -234,9 +249,9 @@ export function ReportsPage() {
         {supplierStatement.length > 0 && (
           <>
             <div className="grid">
-              <div className="status">إجمالي المدين: {money(supplierTotals.debit, supplierTotals.currency)}</div>
-              <div className="status">إجمالي الدائن: {money(supplierTotals.credit, supplierTotals.currency)}</div>
-              <div className="status">الرصيد النهائي: {money(supplierTotals.balance, supplierTotals.currency)}</div>
+              <div className="status">إجمالي المدين: <AmountText value={supplierTotals.debit} currency={supplierTotals.currency} /></div>
+              <div className="status">إجمالي الدائن: <AmountText value={supplierTotals.credit} currency={supplierTotals.currency} /></div>
+              <div className="status">الرصيد النهائي: <AmountText value={supplierTotals.balance} currency={supplierTotals.currency} /></div>
             </div>
             <StatementTable rows={supplierStatement} />
           </>
@@ -249,12 +264,19 @@ export function ReportsPage() {
           <label>تاريخ محدد<input type="date" value={transactionFilters.exactDate} onChange={(event) => setTransactionFilters({ ...transactionFilters, exactDate: event.target.value })} /></label>
           <label>من تاريخ<input type="date" value={transactionFilters.dateFrom} onChange={(event) => setTransactionFilters({ ...transactionFilters, dateFrom: event.target.value })} /></label>
           <label>إلى تاريخ<input type="date" value={transactionFilters.dateTo} onChange={(event) => setTransactionFilters({ ...transactionFilters, dateTo: event.target.value })} /></label>
-          <label>العميل<select value={transactionFilters.customer} onChange={(event) => setTransactionFilters({ ...transactionFilters, customer: event.target.value })}><option value="">كل العملاء</option>{customers.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+          <label>العميل<select value={transactionFilters.customer} onChange={(event) => setTransactionFilters({ ...transactionFilters, customer: event.target.value })}><option value="">كل العملاء المحفوظين</option>{customers.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+          <label>نوع العميل<select value={transactionFilters.customerType} onChange={(event) => setTransactionFilters({ ...transactionFilters, customerType: event.target.value })}><option value="">الكل</option><option value="saved">عميل محفوظ</option><option value="guest">عميل مؤقت</option></select></label>
           <label>المورد<select value={transactionFilters.supplier} onChange={(event) => setTransactionFilters({ ...transactionFilters, supplier: event.target.value })}><option value="">كل الموردين</option>{suppliers.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
           <label>الخدمة<select value={transactionFilters.service} onChange={(event) => setTransactionFilters({ ...transactionFilters, service: event.target.value })}><option value="">كل الخدمات</option>{services.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
           <label>العملة<select value={transactionFilters.currency} onChange={(event) => setTransactionFilters({ ...transactionFilters, currency: event.target.value })}><option value="">كل العملات</option><option>LYD</option><option>USD</option><option>EUR</option></select></label>
           <label>الموظف<select value={transactionFilters.employee} onChange={(event) => setTransactionFilters({ ...transactionFilters, employee: event.target.value })}><option value="">كل الموظفين</option>{profiles.map((item) => <option key={item.id} value={item.id}>{item.full_name}</option>)}</select></label>
           <label>أنشئ بواسطة<select value={transactionFilters.createdBy} onChange={(event) => setTransactionFilters({ ...transactionFilters, createdBy: event.target.value })}><option value="">الكل</option>{profiles.map((item) => <option key={item.id} value={item.id}>{item.full_name}</option>)}</select></label>
+          <label>رقم التذكرة<input value={transactionFilters.ticketNumber} onChange={(event) => setTransactionFilters({ ...transactionFilters, ticketNumber: event.target.value })} /></label>
+          <label>PNR<input value={transactionFilters.pnr} onChange={(event) => setTransactionFilters({ ...transactionFilters, pnr: event.target.value })} /></label>
+          <label>ذهاب من<input type="date" value={transactionFilters.departureFrom} onChange={(event) => setTransactionFilters({ ...transactionFilters, departureFrom: event.target.value })} /></label>
+          <label>ذهاب إلى<input type="date" value={transactionFilters.departureTo} onChange={(event) => setTransactionFilters({ ...transactionFilters, departureTo: event.target.value })} /></label>
+          <label>عودة من<input type="date" value={transactionFilters.returnFrom} onChange={(event) => setTransactionFilters({ ...transactionFilters, returnFrom: event.target.value })} /></label>
+          <label>عودة إلى<input type="date" value={transactionFilters.returnTo} onChange={(event) => setTransactionFilters({ ...transactionFilters, returnTo: event.target.value })} /></label>
           <div className="actions"><button>بحث</button><button type="button" className="secondary" onClick={() => { setTransactionFilters(emptyTransactionFilters); setTransactions([]); setSearchedTransactions(false); setMessage('') }}>مسح الفلاتر</button></div>
         </form>
         {!searchedTransactions && <div className="loading">اختر فلاتر أو نطاق تاريخ ثم اضغط بحث.</div>}
@@ -262,12 +284,19 @@ export function ReportsPage() {
         {searchedTransactions && (
           <DataTable rows={transactions} empty="لا توجد نتائج" columns={[
             { key: 'date', header: 'تاريخ المعاملة', render: (row) => row.transaction_date },
+            { key: 'customer_type', header: 'نوع العميل', render: (row) => row.customer_type === 'guest' ? 'عميل مؤقت' : 'عميل محفوظ' },
             { key: 'customer', header: 'العميل', render: (row) => row.customer_name },
+            { key: 'guest', header: 'اسم العميل المؤقت', render: (row) => row.guest_customer_name ?? '-' },
             { key: 'supplier', header: 'المورد', render: (row) => row.supplier_name },
             { key: 'service', header: 'الخدمة', render: (row) => row.service_name },
-            { key: 'supplier_cost', header: 'تكلفة المورد', render: (row) => money(row.supplier_cost, row.currency) },
-            { key: 'customer_price', header: 'سعر العميل', render: (row) => money(row.customer_price, row.currency) },
-            { key: 'profit', header: 'الربح', render: (row) => money(row.expected_profit, row.currency) },
+            { key: 'ticket', header: 'رقم التذكرة', render: (row) => row.ticket_number ?? '-' },
+            { key: 'pnr', header: 'PNR', render: (row) => row.pnr ?? '-' },
+            { key: 'route', header: 'خط السير', render: (row) => routeSummary(row.route_segments) || '-' },
+            { key: 'departure', header: 'تاريخ الذهاب', render: (row) => row.departure_date ?? '-' },
+            { key: 'return', header: 'تاريخ العودة', render: (row) => row.return_date ?? '-' },
+            { key: 'supplier_cost', header: 'تكلفة المورد', render: (row) => <AmountText value={Number(row.supplier_cost)} currency={row.currency} /> },
+            { key: 'customer_price', header: 'سعر العميل', render: (row) => <AmountText value={Number(row.customer_price)} currency={row.currency} /> },
+            { key: 'profit', header: 'الربح', render: (row) => <AmountText value={Number(row.expected_profit)} currency={row.currency} /> },
             { key: 'currency', header: 'العملة', render: (row) => row.currency },
             { key: 'employee', header: 'الموظف', render: (row) => row.employee_name ?? '' },
             { key: 'created_by', header: 'أنشئ بواسطة', render: (row) => row.created_by_name ?? '' },
@@ -284,9 +313,9 @@ function StatementTable({ rows }: { rows: StatementRow[] }) {
       { key: 'date', header: 'التاريخ', render: (row) => row.entry_date },
       { key: 'type', header: 'نوع القيد', render: (row) => entryLabel(row.entry_type) },
       { key: 'description', header: 'الوصف', render: (row) => row.description ?? '' },
-      { key: 'debit', header: 'مدين', render: (row) => money(debit(row), row.currency) },
-      { key: 'credit', header: 'دائن', render: (row) => money(credit(row), row.currency) },
-      { key: 'balance', header: 'الرصيد الجاري', render: (row) => money(row.running_balance, row.currency) },
+      { key: 'debit', header: 'مدين', render: (row) => <AmountText value={debit(row)} currency={row.currency} /> },
+      { key: 'credit', header: 'دائن', render: (row) => <AmountText value={credit(row)} currency={row.currency} /> },
+      { key: 'balance', header: 'الرصيد الجاري', render: (row) => <AmountText value={row.running_balance} currency={row.currency} /> },
       { key: 'currency', header: 'العملة', render: (row) => row.currency },
       { key: 'created_by', header: 'أنشئ بواسطة', render: (row) => row.profiles?.full_name ?? '' },
       { key: 'transaction', header: 'المعاملة', render: (row) => row.transaction_id ? row.transaction_id.slice(0, 8) : '-' },
@@ -298,9 +327,9 @@ function TransactionTotals({ rows }: { rows: TransactionReportRow[] }) {
   return (
     <DataTable rows={groupedTotals(rows)} columns={[
       { key: 'currency', header: 'العملة', render: (row) => row.currency },
-      { key: 'supplier_cost', header: 'إجمالي تكلفة المورد', render: (row) => money(row.supplier_cost, row.currency) },
-      { key: 'customer_price', header: 'إجمالي سعر العميل', render: (row) => money(row.customer_price, row.currency) },
-      { key: 'profit', header: 'إجمالي الربح المتوقع', render: (row) => money(row.profit, row.currency) },
+      { key: 'supplier_cost', header: 'إجمالي تكلفة المورد', render: (row) => <AmountText value={row.supplier_cost} currency={row.currency} /> },
+      { key: 'customer_price', header: 'إجمالي سعر العميل', render: (row) => <AmountText value={row.customer_price} currency={row.currency} /> },
+      { key: 'profit', header: 'إجمالي الربح المتوقع', render: (row) => <AmountText value={row.profit} currency={row.currency} /> },
     ]} />
   )
 }

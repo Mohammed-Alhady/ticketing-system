@@ -1,4 +1,6 @@
-export function DashboardCard({ title, value, hint }: { title: string; value: string | number; hint?: string }) {
+import type { ReactNode } from 'react'
+
+export function DashboardCard({ title, value, hint }: { title: string; value: ReactNode; hint?: string }) {
   return (
     <section className="card">
       <h3>{title}</h3>

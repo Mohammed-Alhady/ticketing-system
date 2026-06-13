@@ -8,6 +8,7 @@ const links = [
   ['الموردون', '/suppliers'],
   ['الخدمات', '/services'],
   ['المعاملات', '/transactions'],
+  ['الرحلات القادمة', '/upcoming-flights'],
   ['حسابات العملاء', '/customer-accounts'],
   ['حسابات الموردين', '/supplier-accounts'],
   ['التقارير', '/reports'],

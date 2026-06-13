@@ -224,6 +224,29 @@ th {
   margin-top: 0.4rem;
 }
 
+.amount-positive {
+  color: var(--ok);
+  font-weight: 700;
+}
+
+.amount-negative {
+  color: var(--danger);
+  font-weight: 700;
+}
+
+.amount-zero {
+  color: inherit;
+}
+
+.message-preview {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  line-height: 1.9;
+  padding: 1rem;
+  white-space: pre-wrap;
+}
+
 .table-wrap {
   overflow-x: auto;
 }

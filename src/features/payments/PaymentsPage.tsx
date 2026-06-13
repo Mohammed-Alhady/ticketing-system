@@ -2,10 +2,10 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { supabase } from '../../lib/supabase'
 import { canCreateOperationalRecords } from '../../lib/permissions'
 import { today } from '../../utils/dates'
-import { money } from '../../utils/money'
 import type { TransactionSummary } from '../../types/models'
 import { DataTable } from '../../components/ui/DataTable'
 import { useAuth } from '../auth/AuthContext'
+import { AmountText } from '../../components/ui/AmountText'
 
 export function PaymentsPage({ type }: { type: 'customer' | 'supplier' }) {
   const { profile } = useAuth()
@@ -26,7 +26,7 @@ export function PaymentsPage({ type }: { type: 'customer' | 'supplier' }) {
     ])
     const firstError = summary.error ?? paymentRows.error
     if (firstError) setError(firstError.message)
-    setTransactions((summary.data ?? []) as TransactionSummary[])
+    setTransactions(((summary.data ?? []) as TransactionSummary[]).filter((row) => type === 'supplier' || Boolean(row.customer_id)))
     setPayments((paymentRows.data ?? []) as Record<string, unknown>[])
     setLoading(false)
   }, [table])
@@ -39,7 +39,7 @@ export function PaymentsPage({ type }: { type: 'customer' | 'supplier' }) {
     event.preventDefault()
     setError('')
     const selected = transactions.find((row) => row.transaction_id === form.transaction_id)
-    if (!selected || !form.amount) {
+    if (!selected || !form.amount || (type === 'customer' && !selected.customer_id)) {
       setError('المعاملة والمبلغ مطلوبان.')
       return
     }
@@ -82,7 +82,7 @@ export function PaymentsPage({ type }: { type: 'customer' | 'supplier' }) {
           rows={payments}
           columns={[
             { key: 'date', header: 'التاريخ', render: (row) => String(row.entry_date ?? '') },
-            { key: 'amount', header: 'المبلغ', render: (row) => money(Number(row.amount), String(row.currency)) },
+            { key: 'amount', header: 'المبلغ', render: (row) => <AmountText value={Number(row.amount)} currency={String(row.currency)} /> },
             { key: 'method', header: 'الطريقة', render: () => '-' },
             { key: 'notes', header: 'ملاحظات', render: (row) => String(row.description ?? '') },
           ]}

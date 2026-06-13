@@ -7,7 +7,7 @@ import { canCreateOperationalRecords, canMutateRecords } from '../../lib/permiss
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { FormModal } from '../../components/ui/FormModal'
 import { today } from '../../utils/dates'
-import { money } from '../../utils/money'
+import { AmountText } from '../../components/ui/AmountText'
 import type {
   AccountDirection,
   AccountEntryType,
@@ -315,9 +315,9 @@ export function AccountPage({ type }: { type: AccountKind }) {
             { key: 'date', header: 'التاريخ', render: (row) => row.entry_date },
             { key: 'type', header: 'نوع القيد', render: (row) => typeLabel(row.entry_type) },
             { key: 'description', header: 'الوصف', render: (row) => row.description ?? '' },
-            { key: 'debit', header: 'مدين', render: (row) => money(entryDebit(row), row.currency) },
-            { key: 'credit', header: 'دائن', render: (row) => money(entryCredit(row), row.currency) },
-            { key: 'balance', header: 'الرصيد', render: (row) => money(row.running_balance, row.currency) },
+            { key: 'debit', header: 'مدين', render: (row) => <AmountText value={entryDebit(row)} currency={row.currency} /> },
+            { key: 'credit', header: 'دائن', render: (row) => <AmountText value={entryCredit(row)} currency={row.currency} /> },
+            { key: 'balance', header: 'الرصيد', render: (row) => <AmountText value={row.running_balance} currency={row.currency} /> },
             { key: 'currency', header: 'العملة', render: (row) => row.currency },
             { key: 'created_by', header: 'أنشئ بواسطة', render: (row) => row.profiles?.full_name ?? '' },
             { key: 'transaction', header: 'المعاملة', render: (row) => row.transaction_id ? row.transaction_id.slice(0, 8) : '-' },
@@ -333,8 +333,8 @@ export function AccountPage({ type }: { type: AccountKind }) {
               key: 'balances',
               header: 'الرصيد حسب العملة',
               render: (row) => groupedBalances[row.id]?.length
-                ? groupedBalances[row.id].map((balance) => money(Number(balance.balance), balance.currency)).join(' / ')
-                : money(0),
+                ? groupedBalances[row.id].map((balance, index) => <span key={`${balance.currency}-${index}`}>{index > 0 ? ' / ' : ''}<AmountText value={Number(balance.balance)} currency={balance.currency} /></span>)
+                : <AmountText value={0} />,
             },
             { key: 'actions', header: 'الإجراءات', render: (row) => <Link className="button secondary" to={`${config.linkBase}/${row.id}`}>كشف الحساب</Link> },
           ]}
