@@ -416,7 +416,6 @@ tbody tr:hover {
 .table-wrap {
   overflow-x: auto;
   border-radius: 12px;
-  z-index: -1;
 }
 
 .actions {
@@ -474,6 +473,7 @@ tbody tr:hover {
   display: grid;
   place-items: center;
   padding: 1rem;
+  z-index: 10;
 }
 
 .modal {
