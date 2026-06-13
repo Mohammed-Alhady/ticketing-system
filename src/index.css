@@ -1,23 +1,23 @@
 :root {
-  --primary: #0057D9;
-  --primary-hover: #0047B3;
-  --primary-light: #E8F1FF;
-  --secondary: #00A3A3;
-  --secondary-light: #DDF8F8;
-  --accent: #F59E0B;
-  --accent-light: #FFF6DD;
-  --bg: #F6F8FB;
-  --panel: #FFFFFF;
-  --surface-secondary: #F1F5F9;
+  --primary: #0057d9;
+  --primary-hover: #0047b3;
+  --primary-light: #e8f1ff;
+  --secondary: #00a3a3;
+  --secondary-light: #ddf8f8;
+  --accent: #f59e0b;
+  --accent-light: #fff6dd;
+  --bg: #f6f8fb;
+  --panel: #ffffff;
+  --surface-secondary: #f1f5f9;
   --panel-strong: #112240;
-  --sidebar-hover: #1C355E;
-  --text: #1E293B;
-  --muted: #64748B;
-  --line: #E2E8F0;
-  --danger: #DC2626;
-  --warning: #F59E0B;
-  --ok: #16A34A;
-  --flight: #EA580C;
+  --sidebar-hover: #1c355e;
+  --text: #1e293b;
+  --muted: #64748b;
+  --line: #e2e8f0;
+  --danger: #dc2626;
+  --warning: #f59e0b;
+  --ok: #16a34a;
+  --flight: #ea580c;
   --shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
   font-family: "Noto Kufi Arabic", "Tajawal", "Segoe UI", sans-serif;
   color: var(--text);
@@ -145,7 +145,7 @@ th {
 }
 
 tbody tr:nth-child(even) {
-  background: #FAFCFF;
+  background: #fafcff;
 }
 
 tbody tr:hover {
@@ -180,12 +180,12 @@ tbody tr:hover {
 
 .brand p,
 .sidebar small {
-  color: #CBD5E1;
+  color: #cbd5e1;
 }
 
 .nav-link {
   border-radius: 12px;
-  color: #F8FAFC;
+  color: #f8fafc;
   display: block;
   margin: 0.25rem 0;
   padding: 0.75rem 0.85rem;
@@ -266,17 +266,17 @@ tbody tr:hover {
 }
 
 .amount-positive {
-  color: #16A34A;
+  color: #16a34a;
   font-weight: 700;
 }
 
 .amount-negative {
-  color: #DC2626;
+  color: #dc2626;
   font-weight: 700;
 }
 
 .amount-zero {
-  color: #64748B;
+  color: #64748b;
   font-weight: 700;
 }
 
@@ -356,30 +356,67 @@ tbody tr:hover {
   font-size: 1.25rem;
 }
 
-.summary-card.customers { background: #EEF4FF; }
-.summary-card.suppliers { background: #EAFBF8; }
-.summary-card.transactions { background: #FFF7E8; }
-.summary-card.profit { background: #ECFDF3; }
-.summary-card.debt { background: #FEF2F2; }
-.summary-card.flights { background: #FFF7ED; }
+.summary-card.customers {
+  background: #eef4ff;
+}
+.summary-card.suppliers {
+  background: #eafbf8;
+}
+.summary-card.transactions {
+  background: #fff7e8;
+}
+.summary-card.profit {
+  background: #ecfdf3;
+}
+.summary-card.debt {
+  background: #fef2f2;
+}
+.summary-card.flights {
+  background: #fff7ed;
+}
 
-.dashboard-card.customers { background: #EEF4FF; }
-.dashboard-card.suppliers { background: #EAFBF8; }
-.dashboard-card.transactions { background: #FFF7E8; }
-.dashboard-card.profit { background: #ECFDF3; }
-.dashboard-card.debt { background: #FEF2F2; }
-.dashboard-card.flights { background: #FFF7ED; }
+.dashboard-card.customers {
+  background: #eef4ff;
+}
+.dashboard-card.suppliers {
+  background: #eafbf8;
+}
+.dashboard-card.transactions {
+  background: #fff7e8;
+}
+.dashboard-card.profit {
+  background: #ecfdf3;
+}
+.dashboard-card.debt {
+  background: #fef2f2;
+}
+.dashboard-card.flights {
+  background: #fff7ed;
+}
 
-.dashboard-card.customers .metric { color: #0057D9; }
-.dashboard-card.suppliers .metric { color: #00A3A3; }
-.dashboard-card.transactions .metric { color: #F59E0B; }
-.dashboard-card.profit .metric { color: #16A34A; }
-.dashboard-card.debt .metric { color: #DC2626; }
-.dashboard-card.flights .metric { color: #EA580C; }
+.dashboard-card.customers .metric {
+  color: #0057d9;
+}
+.dashboard-card.suppliers .metric {
+  color: #00a3a3;
+}
+.dashboard-card.transactions .metric {
+  color: #f59e0b;
+}
+.dashboard-card.profit .metric {
+  color: #16a34a;
+}
+.dashboard-card.debt .metric {
+  color: #dc2626;
+}
+.dashboard-card.flights .metric {
+  color: #ea580c;
+}
 
 .table-wrap {
   overflow-x: auto;
   border-radius: 12px;
+  z-index: -1;
 }
 
 .actions {
@@ -396,12 +433,12 @@ tbody tr:hover {
 }
 
 .status.ok {
-  background: #ECFDF3;
+  background: #ecfdf3;
   color: var(--ok);
 }
 
 .status.bad {
-  background: #FEF2F2;
+  background: #fef2f2;
   color: var(--danger);
 }
 
@@ -418,8 +455,8 @@ tbody tr:hover {
 }
 
 .error {
-  background: #FEF2F2;
-  border: 1px solid #FECACA;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
   border-radius: 12px;
   color: #8d1f1f;
   padding: 0.8rem;
