@@ -17,6 +17,14 @@ npm install
 npm run dev
 ```
 
+## Current Business Rules
+
+- One-time customer transactions are linked to the saved customer account `عملاء لمرة واحدة`.
+- The real guest name, phone, and notes remain stored on each transaction for ticket reference and WhatsApp messages.
+- Deleting a transaction cascades linked customer and supplier ledger rows for that transaction. Manual account entries keep `transaction_id = null` and are not affected.
+- Ticket route segments can store `from`, `to`, `departure_date`, and `departure_time` per segment. The global departure date/time stays populated from the first segment for reports and upcoming-flight filters.
+- Report filters open in a large popup/modal; the main reports page focuses on the title, summaries, and results table.
+
 Create `.env` in the project root using:
 
 ```env

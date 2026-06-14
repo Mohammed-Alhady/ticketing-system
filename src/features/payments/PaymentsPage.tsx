@@ -29,7 +29,7 @@ export function PaymentsPage({ type }: { type: 'customer' | 'supplier' }) {
     setTransactions(((summary.data ?? []) as TransactionSummary[]).filter((row) => type === 'supplier' || Boolean(row.customer_id)))
     setPayments((paymentRows.data ?? []) as Record<string, unknown>[])
     setLoading(false)
-  }, [table])
+  }, [table, type])
 
   useEffect(() => {
     load()

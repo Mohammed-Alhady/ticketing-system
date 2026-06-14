@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { supabase } from '../../lib/supabase'
 import { canCreateOperationalRecords, canMutateRecords } from '../../lib/permissions'
 import { today } from '../../utils/dates'
-import { buildTicketMessage, customerDisplayPhone, normalizeRouteSegments, routeSummary, whatsappUrl, type RouteSegment } from '../../utils/tickets'
+import { buildTicketMessage, customerDisplayName, customerDisplayPhone, normalizeRouteSegments, routeSegmentsDetails, routeSummary, whatsappUrl, type RouteSegment } from '../../utils/tickets'
 import type { Customer, Profile, Service, Supplier, TransactionSummary } from '../../types/models'
 import { DataTable } from '../../components/ui/DataTable'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
@@ -58,6 +58,8 @@ const initialForm: FormState = {
   employee_id: '',
 }
 
+const oneTimeCustomerName = 'عملاء لمرة واحدة'
+
 export function TransactionsPage() {
   const { profile } = useAuth()
   const admin = canMutateRecords(profile)
@@ -106,6 +108,7 @@ export function TransactionsPage() {
   }
 
   const selectedService = useMemo(() => services.find((service) => service.id === form.service_id), [form.service_id, services])
+  const oneTimeCustomer = useMemo(() => customers.find((customer) => customer.name === oneTimeCustomerName), [customers])
   const isTicket = selectedService?.type === 'ticket'
   const profit = Number(form.customer_price || 0) - Number(form.supplier_cost || 0)
 
@@ -128,17 +131,27 @@ export function TransactionsPage() {
       setError('اسم العميل المؤقت مطلوب.')
       return
     }
+    if (form.customer_type === 'guest' && !oneTimeCustomer) {
+      setError(`حساب ${oneTimeCustomerName} غير موجود. شغل ترحيل قاعدة البيانات الجديد أولا.`)
+      return
+    }
     if (!form.supplier_id || !form.service_id || !form.supplier_cost || !form.customer_price) {
       setError('المورد والخدمة والتكلفة والسعر مطلوبة.')
       return
     }
 
     const routeSegments = form.route_segments
-      .map((segment) => ({ from: segment.from?.trim() ?? '', to: segment.to?.trim() ?? '' }))
-      .filter((segment) => segment.from || segment.to)
+      .map((segment) => ({
+        from: segment.from?.trim() ?? '',
+        to: segment.to?.trim() ?? '',
+        departure_date: segment.departure_date || '',
+        departure_time: segment.departure_time || '',
+      }))
+      .filter((segment) => segment.from || segment.to || segment.departure_date || segment.departure_time)
+    const firstSegment = routeSegments[0]
 
     const payload = {
-      customer_id: form.customer_type === 'saved' ? form.customer_id : null,
+      customer_id: form.customer_type === 'saved' ? form.customer_id : oneTimeCustomer?.id,
       guest_customer_name: form.customer_type === 'guest' ? form.guest_customer_name.trim() : null,
       guest_customer_phone: form.customer_type === 'guest' ? form.guest_customer_phone.trim() || null : null,
       guest_customer_notes: form.customer_type === 'guest' ? form.guest_customer_notes.trim() || null : null,
@@ -153,8 +166,8 @@ export function TransactionsPage() {
       ticket_number: isTicket ? form.ticket_number.trim() || null : null,
       pnr: isTicket ? form.pnr.trim() || null : null,
       route_segments: isTicket && routeSegments.length ? routeSegments : null,
-      departure_date: isTicket ? form.departure_date || null : null,
-      departure_time: isTicket ? form.departure_time || null : null,
+      departure_date: isTicket ? firstSegment?.departure_date || form.departure_date || null : null,
+      departure_time: isTicket ? firstSegment?.departure_time || form.departure_time || null : null,
       return_date: isTicket ? form.return_date || null : null,
       return_time: isTicket ? form.return_time || null : null,
       created_by: profile?.id,
@@ -187,9 +200,11 @@ export function TransactionsPage() {
 
   function openForEdit(row: TransactionSummary) {
     const routeSegments = normalizeRouteSegments(row.route_segments)
+    if (routeSegments.length && !routeSegments[0].departure_date && row.departure_date) routeSegments[0].departure_date = row.departure_date
+    if (routeSegments.length && !routeSegments[0].departure_time && row.departure_time) routeSegments[0].departure_time = row.departure_time
     setEditing(row.transaction_id)
     setForm({
-      customer_type: row.customer_id ? 'saved' : 'guest',
+      customer_type: row.customer_type === 'guest' || Boolean(row.guest_customer_name) ? 'guest' : 'saved',
       customer_id: row.customer_id ?? '',
       guest_customer_name: row.guest_customer_name ?? '',
       guest_customer_phone: row.guest_customer_phone ?? '',
@@ -204,7 +219,7 @@ export function TransactionsPage() {
       notes: '',
       ticket_number: row.ticket_number ?? '',
       pnr: row.pnr ?? '',
-      route_segments: routeSegments.length ? routeSegments : [{ from: '', to: '' }],
+      route_segments: routeSegments.length ? routeSegments : [{ from: '', to: '', departure_date: row.departure_date ?? '', departure_time: row.departure_time ?? '' }],
       departure_date: row.departure_date ?? '',
       departure_time: row.departure_time ?? '',
       return_date: row.return_date ?? '',
@@ -230,7 +245,7 @@ export function TransactionsPage() {
         <form className="form-grid" onSubmit={submit}>
           <label>نوع العميل<select value={form.customer_type} onChange={(event) => setForm({ ...form, customer_type: event.target.value as 'saved' | 'guest', customer_id: '', guest_customer_name: '', guest_customer_phone: '', guest_customer_notes: '' })}><option value="saved">عميل محفوظ</option><option value="guest">عميل مؤقت / مرة واحدة</option></select></label>
           {form.customer_type === 'saved' ? (
-            <label>العميل<select value={form.customer_id} onChange={(event) => setForm({ ...form, customer_id: event.target.value })}><option value="">اختر</option>{customers.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+            <label>العميل<select value={form.customer_id} onChange={(event) => setForm({ ...form, customer_id: event.target.value })}><option value="">اختر</option>{customers.filter((item) => item.name !== oneTimeCustomerName).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
           ) : (
             <>
               <label>اسم العميل المؤقت<input value={form.guest_customer_name} onChange={(event) => setForm({ ...form, guest_customer_name: event.target.value })} /></label>
@@ -250,8 +265,6 @@ export function TransactionsPage() {
             <>
               <label>رقم التذكرة<input value={form.ticket_number} onChange={(event) => setForm({ ...form, ticket_number: event.target.value })} /></label>
               <label>PNR<input value={form.pnr} onChange={(event) => setForm({ ...form, pnr: event.target.value })} /></label>
-              <label>تاريخ الذهاب<input type="date" value={form.departure_date} onChange={(event) => setForm({ ...form, departure_date: event.target.value })} /></label>
-              <label>وقت الذهاب<input type="time" value={form.departure_time} onChange={(event) => setForm({ ...form, departure_time: event.target.value })} /></label>
               <label>تاريخ العودة<input type="date" value={form.return_date} onChange={(event) => setForm({ ...form, return_date: event.target.value })} /></label>
               <label>وقت العودة<input type="time" value={form.return_time} onChange={(event) => setForm({ ...form, return_time: event.target.value })} /></label>
               <div className="card">
@@ -260,10 +273,15 @@ export function TransactionsPage() {
                   <div className="form-grid" key={index}>
                     <label>من<input value={segment.from ?? ''} onChange={(event) => updateSegment(index, 'from', event.target.value)} /></label>
                     <label>إلى<input value={segment.to ?? ''} onChange={(event) => updateSegment(index, 'to', event.target.value)} /></label>
-                    <div className="actions"><button type="button" className="danger" onClick={() => setForm({ ...form, route_segments: form.route_segments.filter((_, segmentIndex) => segmentIndex !== index) || [{ from: '', to: '' }] })}>حذف المقطع</button></div>
+                    <label>تاريخ المغادرة<input type="date" value={segment.departure_date ?? ''} onChange={(event) => updateSegment(index, 'departure_date', event.target.value)} /></label>
+                    <label>وقت المغادرة<input type="time" value={segment.departure_time ?? ''} onChange={(event) => updateSegment(index, 'departure_time', event.target.value)} /></label>
+                    <div className="actions"><button type="button" className="danger" onClick={() => {
+                      const next = form.route_segments.filter((_, segmentIndex) => segmentIndex !== index)
+                      setForm({ ...form, route_segments: next.length ? next : [{ from: '', to: '', departure_date: '', departure_time: '' }] })
+                    }}>حذف المقطع</button></div>
                   </div>
                 ))}
-                <div className="actions"><button type="button" className="secondary" onClick={() => setForm({ ...form, route_segments: [...form.route_segments, { from: '', to: '' }] })}>إضافة مقطع</button></div>
+                <div className="actions"><button type="button" className="secondary" onClick={() => setForm({ ...form, route_segments: [...form.route_segments, { from: '', to: '', departure_date: '', departure_time: '' }] })}>إضافة مقطع</button></div>
               </div>
             </>
           )}
@@ -281,13 +299,13 @@ export function TransactionsPage() {
           rows={rows}
           columns={[
             { key: 'date', header: 'التاريخ', render: (row) => row.transaction_date },
-            { key: 'customer', header: 'العميل', render: (row) => row.customer_name },
+            { key: 'customer', header: 'العميل', render: (row) => customerDisplayName(row) },
             { key: 'supplier', header: 'المورد', render: (row) => row.supplier_name },
             { key: 'service', header: 'الخدمة', render: (row) => row.service_name },
             { key: 'ticket_number', header: 'رقم التذكرة', render: (row) => row.ticket_number ?? '-' },
             { key: 'pnr', header: 'PNR', render: (row) => row.pnr ?? '-' },
             { key: 'route', header: 'خط السير', render: (row) => routeSummary(row.route_segments) || '-' },
-            { key: 'departure', header: 'الذهاب', render: (row) => [row.departure_date, row.departure_time].filter(Boolean).join(' ') || '-' },
+            { key: 'departure', header: 'الذهاب', render: (row) => routeSegmentsDetails(row.route_segments).join(' / ') || [row.departure_date, row.departure_time].filter(Boolean).join(' ') || '-' },
             { key: 'return', header: 'العودة', render: (row) => [row.return_date, row.return_time].filter(Boolean).join(' ') || '-' },
             { key: 'customer_price', header: 'سعر العميل', render: (row) => <AmountText value={Number(row.customer_price)} currency={row.currency} /> },
             { key: 'supplier_cost', header: 'تكلفة المورد', render: (row) => <AmountText value={Number(row.supplier_cost)} currency={row.currency} /> },

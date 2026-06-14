@@ -3,7 +3,7 @@ import { DataTable } from '../../components/ui/DataTable'
 import { FormModal } from '../../components/ui/FormModal'
 import { supabase } from '../../lib/supabase'
 import { today } from '../../utils/dates'
-import { buildTicketMessage, customerDisplayPhone, routeSummary, whatsappUrl } from '../../utils/tickets'
+import { buildTicketMessage, customerDisplayName, customerDisplayPhone, routeSegmentsDetails, routeSummary, whatsappUrl } from '../../utils/tickets'
 import type { TransactionReportRow } from '../../types/models'
 
 type FilterMode = 'all' | 'departures' | 'returns' | 'today' | '7' | '30'
@@ -57,7 +57,7 @@ export function UpcomingFlightsPage() {
         const max = limitDate(30)
         if (!((departure >= currentDate && departure <= max) || (returning >= currentDate && returning <= max))) return false
       }
-      if (search && !`${row.customer_name ?? ''} ${row.guest_customer_name ?? ''}`.toLowerCase().includes(search)) return false
+      if (search && !customerDisplayName(row).toLowerCase().includes(search)) return false
       if (pnr && !String(row.pnr ?? '').toLowerCase().includes(pnr)) return false
       if (ticket && !String(row.ticket_number ?? '').toLowerCase().includes(ticket)) return false
       return true
@@ -86,12 +86,12 @@ export function UpcomingFlightsPage() {
 
       {loading ? <div className="loading">جاري التحميل...</div> : (
         <DataTable rows={visibleRows} empty="لا توجد رحلات" columns={[
-          { key: 'customer', header: 'العميل', render: (row) => row.customer_name },
+          { key: 'customer', header: 'العميل', render: (row) => customerDisplayName(row) },
           { key: 'phone', header: 'الهاتف', render: (row) => customerDisplayPhone(row) || '-' },
           { key: 'route', header: 'خط السير', render: (row) => routeSummary(row.route_segments) || '-' },
           { key: 'ticket', header: 'رقم التذكرة', render: (row) => row.ticket_number ?? '-' },
           { key: 'pnr', header: 'PNR', render: (row) => row.pnr ?? '-' },
-          { key: 'departure', header: 'الذهاب', render: (row) => [row.departure_date, row.departure_time].filter(Boolean).join(' ') || '-' },
+          { key: 'departure', header: 'الذهاب', render: (row) => routeSegmentsDetails(row.route_segments).join(' / ') || [row.departure_date, row.departure_time].filter(Boolean).join(' ') || '-' },
           { key: 'return', header: 'العودة', render: (row) => [row.return_date, row.return_time].filter(Boolean).join(' ') || '-' },
           { key: 'supplier', header: 'المورد', render: (row) => row.supplier_name },
           { key: 'employee', header: 'الموظف', render: (row) => row.employee_name ?? '' },

@@ -3,7 +3,7 @@ import { AmountText } from '../../components/ui/AmountText'
 import { FormModal } from '../../components/ui/FormModal'
 import { supabase } from '../../lib/supabase'
 import { today } from '../../utils/dates'
-import { buildTicketMessage, customerDisplayPhone, routeSummary, whatsappUrl } from '../../utils/tickets'
+import { buildTicketMessage, customerDisplayName, customerDisplayPhone, routeSegmentsDetails, routeSummary, whatsappUrl } from '../../utils/tickets'
 import type { Customer, CustomerAccountEntry, Profile, Service, Supplier, SupplierAccountEntry, TransactionReportRow } from '../../types/models'
 import { ReportFilters } from './components/ReportFilters'
 import { ReportTable, type ReportColumn } from './components/ReportTable'
@@ -118,6 +118,7 @@ export function ReportsPage() {
   const [messageRow, setMessageRow] = useState<TransactionReportRow | null>(null)
   const [loading, setLoading] = useState(true)
   const [reportLoading, setReportLoading] = useState(false)
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
@@ -182,6 +183,7 @@ export function ReportsPage() {
       else if (activeReport === 'employee-transactions') await loadEmployeeTransactions()
     } finally {
       setReportLoading(false)
+      setFiltersOpen(false)
     }
   }
 
@@ -368,7 +370,7 @@ export function ReportsPage() {
     const { data, error } = await query.limit(500)
     if (error) throw error
     const rows = ((data ?? []) as TransactionReportRow[]).filter((row) => {
-      if (form.customer && !String(row.customer_name ?? '').toLowerCase().includes(form.customer.toLowerCase())) return false
+      if (form.customer && !customerDisplayName(row).toLowerCase().includes(form.customer.toLowerCase())) return false
       if (form.guestCustomer && !String(row.guest_customer_name ?? '').toLowerCase().includes(form.guestCustomer.toLowerCase())) return false
       return true
     })
@@ -459,15 +461,24 @@ export function ReportsPage() {
       <section className="report-section">
         <div className="page-header">
           <h3>{activeTitle}</h3>
-          <span className="status">تصدير: قريبا</span>
+          <div className="actions">
+            <button type="button" className="secondary" onClick={() => setFiltersOpen(true)}>الفلاتر</button>
+            <span className="status">تصدير: قريبا</span>
+          </div>
         </div>
-        <ReportFilters onSearch={runReport} onReset={resetActiveFilters}>
-          {renderFilters()}
-        </ReportFilters>
         <SummaryCards cards={report.summaries} />
         {!report.searched && <div className="loading">اختر الفلاتر ثم اضغط بحث لعرض النتائج.</div>}
         {report.searched && <ReportTable rows={report.rows} columns={report.columns} empty={report.empty ?? 'لا توجد نتائج'} />}
       </section>
+
+      {filtersOpen && (
+        <FormModal title={`${activeTitle} - الفلاتر`} onClose={() => setFiltersOpen(false)}>
+          <ReportFilters onSearch={runReport} onReset={resetActiveFilters}>
+            {renderFilters()}
+            <button type="button" className="secondary" onClick={() => setFiltersOpen(false)}>إغلاق</button>
+          </ReportFilters>
+        </FormModal>
+      )}
 
       {messageRow && <TicketMessageModal row={messageRow} onCopy={copyMessage} onClose={() => setMessageRow(null)} />}
     </section>
@@ -595,7 +606,7 @@ export function ReportsPage() {
   function transactionColumns(): ReportColumn<ReportRow>[] {
     return [
       { key: 'date', header: 'تاريخ المعاملة', render: (row) => String(row.transaction_date ?? '') },
-      { key: 'customer', header: 'العميل', render: (row) => String(row.customer_name ?? '') },
+      { key: 'customer', header: 'العميل', render: (row) => customerDisplayName(row as TransactionReportRow) },
       { key: 'supplier', header: 'المورد', render: (row) => String(row.supplier_name ?? '') },
       { key: 'service', header: 'الخدمة', render: (row) => String(row.service_name ?? '') },
       { key: 'ticket', header: 'رقم التذكرة', render: (row) => String(row.ticket_number ?? '-') },
@@ -632,12 +643,12 @@ export function ReportsPage() {
 
   function flightColumns(): ReportColumn<ReportRow>[] {
     return [
-      { key: 'customer', header: 'العميل', render: (row) => String(row.customer_name ?? '') },
+      { key: 'customer', header: 'العميل', render: (row) => customerDisplayName(row as TransactionReportRow) },
       { key: 'phone', header: 'الهاتف', render: (row) => customerDisplayPhone(row as TransactionReportRow) || '-' },
       { key: 'route', header: 'الوجهة', render: (row) => routeSummary(row.route_segments) || '-' },
       { key: 'ticket', header: 'رقم التذكرة', render: (row) => String(row.ticket_number ?? '-') },
       { key: 'pnr', header: 'PNR', render: (row) => String(row.pnr ?? '-') },
-      { key: 'departure', header: 'تاريخ الذهاب', render: (row) => [row.departure_date, row.departure_time].filter(Boolean).join(' ') || '-' },
+      { key: 'departure', header: 'تاريخ الذهاب', render: (row) => routeSegmentsDetails(row.route_segments).join(' / ') || [row.departure_date, row.departure_time].filter(Boolean).join(' ') || '-' },
       { key: 'return', header: 'تاريخ العودة', render: (row) => [row.return_date, row.return_time].filter(Boolean).join(' ') || '-' },
       { key: 'supplier', header: 'المورد', render: (row) => String(row.supplier_name ?? '') },
       { key: 'employee', header: 'الموظف', render: (row) => String(row.employee_name ?? '') },

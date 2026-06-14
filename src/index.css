@@ -295,6 +295,14 @@ tbody tr:hover {
   gap: 1rem;
 }
 
+.reports-page {
+  width: 100%;
+}
+
+.report-section {
+  align-content: start;
+}
+
 .report-tabs {
   align-items: center;
   background: var(--panel);
@@ -331,6 +339,15 @@ tbody tr:hover {
 .report-filter-card,
 .report-table-card {
   box-shadow: none;
+}
+
+.report-filter-card {
+  border: 0;
+  padding: 0;
+}
+
+.report-table-card {
+  overflow: hidden;
 }
 
 .summary-grid {
@@ -483,9 +500,17 @@ tbody tr:hover {
 
 .wide-modal {
   max-height: 88vh;
-  max-width: 900px;
+  max-width: 1100px;
   overflow: auto;
-  width: min(900px, 96vw);
+  width: min(1100px, 96vw);
+}
+
+.reports-page .table-wrap {
+  width: 100%;
+}
+
+.reports-page table {
+  min-width: 980px;
 }
 
 @media (max-width: 880px) {
@@ -496,5 +521,19 @@ tbody tr:hover {
   .sidebar {
     height: auto;
     position: static;
+  }
+
+  .main {
+    padding: 0.75rem;
+  }
+
+  .page-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .wide-modal {
+    max-height: 94vh;
+    width: 98vw;
   }
 }
